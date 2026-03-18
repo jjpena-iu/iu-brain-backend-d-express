@@ -1,38 +1,30 @@
-:root {
-  --bg: #0a0a12;
-  --surface: #12121e;
-  --surface2: #1a1a2e;
-  --border: rgba(255,255,255,0.07);
-  --accent: #7c5cfc;
-  --accent2: #a78bfa;
-  --accent-glow: rgba(124,92,252,0.2);
-  --green: #34d399;
-  --amber: #fbbf24;
-  --text: #e8e8f0;
-  --text-muted: #6b6b8a;
-  --text-dim: #9898b8;
-  --font-display: 'Syne', sans-serif;
-  --font-body: 'DM Sans', sans-serif;
-  --radius: 10px;
-  --transition: 0.2s ease;
-}
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap');
 
-html, body, #root {
-  height: 100%;
-  overflow: hidden;
-}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body, #root { height: 100%; overflow: hidden; }
+body { font-family: 'DM Sans', sans-serif; -webkit-font-smoothing: antialiased; }
 
-body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: var(--font-body);
-  font-size: 14px;
-  line-height: 1.6;
-  -webkit-font-smoothing: antialiased;
-}
+.markdown-body h1 { @apply text-2xl font-bold mb-4 mt-6 text-hiuman-dark font-display; }
+.markdown-body h2 { @apply text-base font-bold mb-3 mt-6 text-hiuman-dark border-b border-slate-200 pb-2 uppercase tracking-wider font-display; }
+.markdown-body h3 { @apply text-base font-semibold mb-2 mt-4 text-hiuman-purple font-display; }
+.markdown-body p { @apply mb-4 leading-relaxed text-slate-700 text-sm; }
+.markdown-body ul { @apply list-disc pl-6 mb-4 space-y-1 text-sm text-slate-700; }
+.markdown-body ol { @apply list-decimal pl-6 mb-4 space-y-1 text-sm text-slate-700; }
+.markdown-body li { @apply leading-relaxed; }
+.markdown-body strong { @apply font-semibold text-slate-800; }
+.markdown-body em { @apply italic text-slate-600; }
+.markdown-body table { @apply w-full border-collapse mb-6 text-sm; }
+.markdown-body th { @apply bg-indigo-50 border border-slate-200 p-2 text-left font-semibold text-hiuman-dark; }
+.markdown-body td { @apply border border-slate-200 p-2 text-slate-700; }
+.markdown-body tr:nth-child(even) td { @apply bg-slate-50; }
+.markdown-body hr { @apply my-8 border-slate-200; }
+.markdown-body blockquote { @apply border-l-4 border-hiuman-purple pl-4 italic text-slate-600 my-4; }
+.markdown-body code { @apply bg-slate-100 px-1.5 py-0.5 rounded text-xs font-mono text-hiuman-dark; }
 
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 4px; }
+::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 4px; }
