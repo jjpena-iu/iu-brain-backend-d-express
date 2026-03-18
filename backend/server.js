@@ -10,7 +10,7 @@ const PORT = process.env.PORT || 3001;
 const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:4173',
-  process.env.FRONTEND_URL,
+  'https://jjpena-iu.github.io',
 ].filter(Boolean);
 
 app.use(cors({
@@ -18,8 +18,6 @@ app.use(cors({
     if (!origin || allowedOrigins.some(o => origin.startsWith(o))) return cb(null, true);
     cb(new Error('Not allowed by CORS'));
   },
-  methods: ['GET', 'POST'],
-  allowedHeaders: ['Content-Type'],
 }));
 
 app.use(express.json({ limit: '2mb' }));
