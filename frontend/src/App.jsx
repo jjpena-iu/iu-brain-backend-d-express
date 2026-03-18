@@ -171,7 +171,7 @@ export default function App() {
           </div>
           {/* Logo Hiumanlab */}
           <div className="mt-4 flex justify-center">
-            <img src="/iu-brain-backend-d-express/logo-hiumanlab.png" alt="Hiumanlab" className="h-5 opacity-40" />
+            <img src="/iu-brain-d-express/logo-hiumanlab.png" alt="Hiumanlab" className="h-5" style={{filter: 'brightness(0) invert(1)', opacity: 0.6}} />
           </div>
         </div>
       </aside>
