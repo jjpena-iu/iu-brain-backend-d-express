@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Brain, Send, FileText, CheckCircle2, Loader2, User, Download, Copy } from 'lucide-react';
+import { Brain, Send, FileText, CheckCircle2, Loader2, User, Download, Copy, Mail } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -36,6 +36,11 @@ export default function App() {
   const [currentPhase, setCurrentPhase] = useState(1);
   const [report, setReport] = useState(null);
   const [sessionDone, setSessionDone] = useState(false);
+  const [consultorEmail, setConsultorEmail] = useState('');
+  const [clientEmail, setClientEmail] = useState('');
+  const [emailSending, setEmailSending] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
+  const [emailError, setEmailError] = useState('');
   const scrollRef = useRef(null);
 
   useEffect(() => {
@@ -113,6 +118,26 @@ export default function App() {
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
     };
     await window.html2pdf().set(opt).from(el).save();
+  };
+
+  const sendEmail = async () => {
+    if (!consultorEmail) return;
+    setEmailSending(true);
+    setEmailError('');
+    try {
+      const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+      const res = await fetch(`${BACKEND_URL}/api/send-report`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reportMarkdown: report, clientName, consultorEmail, clientEmail }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Error al enviar');
+      setEmailSent(true);
+    } catch (err) {
+      setEmailError(err.message);
+    }
+    setEmailSending(false);
   };
 
   const progress = Math.min(questionCount, 15);
@@ -328,6 +353,48 @@ export default function App() {
                       </p>
                     </div>
                   </div>
+                </div>
+
+                {/* ── EMAIL SECTION ── */}
+                <div className="border-t border-slate-200 bg-slate-50/80 p-6 flex-shrink-0">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Mail className="w-4 h-4 text-hiuman-purple" />
+                    <span className="text-xs font-bold text-slate-700 uppercase tracking-wide">Enviar reporte por correo</span>
+                  </div>
+                  {emailSent ? (
+                    <div className="flex items-center gap-2 text-emerald-600 text-sm font-medium">
+                      <CheckCircle2 className="w-4 h-4" />
+                      ¡Correo enviado correctamente!
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <input
+                        type="email"
+                        value={consultorEmail}
+                        onChange={e => setConsultorEmail(e.target.value)}
+                        placeholder="Tu correo (consultor) *"
+                        className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-hiuman-purple transition-all"
+                      />
+                      <input
+                        type="email"
+                        value={clientEmail}
+                        onChange={e => setClientEmail(e.target.value)}
+                        placeholder="Correo del cliente (opcional)"
+                        className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-hiuman-purple transition-all"
+                      />
+                      {emailError && (
+                        <p className="text-red-500 text-xs">{emailError}</p>
+                      )}
+                      <button
+                        onClick={sendEmail}
+                        disabled={!consultorEmail || emailSending}
+                        className="w-full flex items-center justify-center gap-2 py-2.5 bg-hiuman-purple text-white text-sm font-bold rounded-xl hover:bg-indigo-600 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        {emailSending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
+                        {emailSending ? 'Enviando...' : 'Enviar reporte'}
+                      </button>
+                    </div>
+                  )}
                 </div>
               </motion.div>
             )}
