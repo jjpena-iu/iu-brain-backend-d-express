@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const fetch = require('node-fetch');
+const { Resend } = require('resend');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -249,6 +250,114 @@ app.post('/api/chat', async (req, res) => {
 
   } catch (err) {
     console.error('Gemini fetch error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── EMAIL ENDPOINT (Resend SDK) ──
+app.post('/api/send-report', async (req, res) => {
+  const { reportMarkdown, clientName, consultorEmail, clientEmail } = req.body;
+
+  if (!reportMarkdown || !consultorEmail) {
+    return res.status(400).json({ error: 'reportMarkdown y consultorEmail son requeridos' });
+  }
+
+  const resendKey = process.env.RESEND_API_KEY;
+  if (!resendKey) {
+    return res.status(500).json({ error: 'RESEND_API_KEY no configurada en el servidor' });
+  }
+
+  // Convert markdown to HTML for email
+  const mdToHtml = (text) => {
+    return text
+      .replace(/^# (.+)$/gm, '<h1 style="color:#1e1b4b;font-family:sans-serif;font-size:22px;font-weight:800;margin:24px 0 12px;letter-spacing:-0.5px">$1</h1>')
+      .replace(/^## (.+)$/gm, '<h2 style="color:#1e1b4b;font-family:sans-serif;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid #e2e8f0;padding-bottom:8px;margin:28px 0 12px">$1</h2>')
+      .replace(/^### (.+)$/gm, '<h3 style="color:#6366f1;font-family:sans-serif;font-size:14px;font-weight:700;margin:20px 0 8px">$1</h3>')
+      .replace(/\*\*(.+?)\*\*/g, '<strong style="font-weight:600;color:#1e293b">$1</strong>')
+      .replace(/\*([^*]+?)\*/g, '<em style="font-style:italic;color:#64748b">$1</em>')
+      .replace(/^---$/gm, '<hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0"/>')
+      .replace(/^- (.+)$/gm, '<li style="margin-bottom:5px;color:#475569;font-size:13px;line-height:1.6">$1</li>')
+      .replace(/^\d+\. (.+)$/gm, '<li style="margin-bottom:5px;color:#475569;font-size:13px;line-height:1.6">$1</li>')
+      .replace(/(<li[^>]*>[\s\S]*?<\/li>\n?)+/g, m => `<ul style="padding-left:20px;margin:8px 0 12px">${m}</ul>`)
+      .replace(/^(\|.+\|\n)((?:\|[-:| ]+\|\n))((?:\|.+\|\n?)*)/gm, (_, header, sep, body) => {
+        const parseRow = row => row.trim().replace(/^\||\|$/g, '').split('|').map(c => c.trim());
+        const headers = parseRow(header);
+        const rows = body.trim().split('\n').filter(Boolean).map(parseRow);
+        const thead = `<thead><tr>${headers.map(h => `<th style="background:#f1f5f9;border:1px solid #e2e8f0;padding:8px 10px;text-align:left;font-size:12px;font-weight:600;color:#1e1b4b">${h}</th>`).join('')}</tr></thead>`;
+        const tbody = `<tbody>${rows.map((r, i) => `<tr style="background:${i % 2 === 0 ? '#fff' : '#f8fafc'}">${r.map(c => `<td style="border:1px solid #e2e8f0;padding:7px 10px;font-size:12px;color:#475569">${c}</td>`).join('')}</tr>`).join('')}</tbody>`;
+        return `<table style="width:100%;border-collapse:collapse;margin:12px 0 16px;font-size:13px">${thead}${tbody}</table>`;
+      })
+      .replace(/^(?!<[h|u|t|l|o|i|s|h])(.+)$/gm, m => m.trim() ? `<p style="color:#475569;font-size:13px;line-height:1.7;margin-bottom:10px">${m}</p>` : '')
+      .replace(/\n{3,}/g, '\n');
+  };
+
+  const today = new Date().toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' });
+
+  const htmlBody = `<!DOCTYPE html>
+<html lang="es">
+<head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/></head>
+<body style="margin:0;padding:32px 16px;background:#f1f5f9;font-family:Arial,sans-serif">
+  <div style="max-width:660px;margin:0 auto">
+
+    <!-- Brand header -->
+    <div style="background:#1e1b4b;border-radius:12px 12px 0 0;padding:28px 40px">
+      <table width="100%" cellpadding="0" cellspacing="0"><tr>
+        <td>
+          <div style="color:#ffffff;font-size:20px;font-weight:800;letter-spacing:-0.5px">Hiumanlab</div>
+          <div style="color:#a78bfa;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1.5px;margin-top:3px">iu Brain · Diagnóstico Express</div>
+          <div style="color:#6b7280;font-size:10px;margin-top:2px">Creating Technology Together</div>
+        </td>
+        <td style="text-align:right;vertical-align:top">
+          <div style="color:#a78bfa;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px">Reporte de Diagnóstico</div>
+          <div style="color:#6b7280;font-size:10px;margin-top:3px">${today}</div>
+          ${clientName ? `<div style="color:#ffffff;font-size:12px;font-weight:600;margin-top:4px">${clientName}</div>` : ''}
+        </td>
+      </tr></table>
+    </div>
+
+    <!-- Content -->
+    <div style="background:#ffffff;padding:40px;border-left:1px solid #e2e8f0;border-right:1px solid #e2e8f0">
+      ${mdToHtml(reportMarkdown)}
+    </div>
+
+    <!-- Footer -->
+    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 12px 12px;padding:20px 40px">
+      <table width="100%" cellpadding="0" cellspacing="0"><tr>
+        <td><div style="color:#6366f1;font-size:12px;font-weight:700">Hiumanlab · iu Brain</div></td>
+        <td style="text-align:right">
+          <div style="color:#94a3b8;font-size:11px">contacto@hiumanlab.com · www.iucorporation.com</div>
+          <div style="color:#94a3b8;font-size:10px;margin-top:2px">Generado por iu Brain — Creating Technology Together</div>
+        </td>
+      </tr></table>
+    </div>
+
+  </div>
+</body>
+</html>`;
+
+  const recipients = [consultorEmail];
+  if (clientEmail && clientEmail.trim() && clientEmail !== consultorEmail) {
+    recipients.push(clientEmail.trim());
+  }
+
+  try {
+    const resend = new Resend(resendKey);
+    const { data, error } = await resend.emails.send({
+      from: 'iu Brain <onboarding@resend.dev>',
+      to: recipients,
+      subject: `Diagnóstico Express${clientName ? ` — ${clientName}` : ''} | Hiumanlab`,
+      html: htmlBody,
+    });
+
+    if (error) {
+      console.error('Resend error:', error);
+      return res.status(400).json({ error: error.message });
+    }
+
+    res.json({ success: true, id: data.id });
+
+  } catch (err) {
+    console.error('Resend exception:', err);
     res.status(500).json({ error: err.message });
   }
 });
