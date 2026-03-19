@@ -2,8 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Brain, Send, FileText, CheckCircle2, Loader2, User, Download, Copy } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { sendChatMessage, extractReport, stripReportMarkers } from './services/api.js';
- 
+
 const PHASES = [
   { id: 1, label: 'Contexto del Negocio', time: '0-5 min' },
   { id: 2, label: 'Procesos y Tareas', time: '5-15 min' },
@@ -11,8 +12,19 @@ const PHASES = [
   { id: 4, label: 'Impacto de Negocio', time: '25-30 min' },
 ];
 
+const LOGO_PATH = '/iu-brain-d-express/logo-hiumanlab.png';
+
 function cn(...classes) {
   return classes.filter(Boolean).join(' ');
+}
+
+// ReactMarkdown with GFM tables enabled
+function MD({ children, className }) {
+  return (
+    <div className={className}>
+      <ReactMarkdown remarkPlugins={[remarkGfm]}>{children}</ReactMarkdown>
+    </div>
+  );
 }
 
 export default function App() {
@@ -26,7 +38,6 @@ export default function App() {
   const [sessionDone, setSessionDone] = useState(false);
   const scrollRef = useRef(null);
 
-  // Show welcome message on load
   useEffect(() => {
     setMessages([{
       role: 'assistant',
@@ -62,7 +73,6 @@ export default function App() {
 
     try {
       const reply = await sendChatMessage(newHistory);
-
       const phase = detectPhase(reply);
       if (phase) setCurrentPhase(phase);
 
@@ -76,7 +86,6 @@ export default function App() {
       const displayText = stripReportMarkers(reply);
       setMessages(prev => [...prev, { role: 'assistant', content: displayText }]);
       setHistory(prev => [...prev, { role: 'model', parts: [{ text: reply }] }]);
-
     } catch (err) {
       setMessages(prev => [...prev, {
         role: 'assistant',
@@ -113,7 +122,6 @@ export default function App() {
 
       {/* ── SIDEBAR ── */}
       <aside className="w-72 bg-hiuman-dark text-white p-6 flex flex-col border-r border-indigo-900/50 flex-shrink-0">
-        {/* Logo */}
         <div className="flex items-center gap-3 mb-10">
           <div className="bg-hiuman-purple p-2 rounded-xl">
             <Brain className="w-5 h-5 text-white" />
@@ -124,20 +132,16 @@ export default function App() {
           </div>
         </div>
 
-        {/* Phases */}
         <nav className="flex-1 space-y-2">
           <p className="text-indigo-400 text-[10px] font-bold uppercase tracking-widest mb-4">Fases del Diagnóstico</p>
           {PHASES.map((phase) => {
             const isActive = currentPhase === phase.id;
-            const isDone = typeof currentPhase === 'number' && currentPhase > phase.id || currentPhase === 'completed';
+            const isDone = (typeof currentPhase === 'number' && currentPhase > phase.id) || currentPhase === 'completed';
             return (
-              <div
-                key={phase.id}
-                className={cn(
-                  'flex items-center gap-3 p-3 rounded-xl transition-all duration-300',
-                  isActive ? 'bg-white/10 ring-1 ring-white/20' : isDone ? 'opacity-70' : 'opacity-35'
-                )}
-              >
+              <div key={phase.id} className={cn(
+                'flex items-center gap-3 p-3 rounded-xl transition-all duration-300',
+                isActive ? 'bg-white/10 ring-1 ring-white/20' : isDone ? 'opacity-70' : 'opacity-35'
+              )}>
                 <div className={cn(
                   'w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0',
                   isActive ? 'bg-hiuman-purple text-white' : isDone ? 'bg-emerald-500 text-white' : 'bg-white/20 text-white'
@@ -153,7 +157,6 @@ export default function App() {
           })}
         </nav>
 
-        {/* Progress bar */}
         <div className="mt-auto pt-6 border-t border-white/10">
           <div className="bg-white/5 rounded-2xl p-4">
             <div className="flex justify-between items-center mb-2">
@@ -169,17 +172,19 @@ export default function App() {
               />
             </div>
           </div>
-          {/* Logo Hiumanlab */}
+          {/* Logo — mix-blend-mode makes black transparent on dark bg */}
           <div className="mt-4 flex justify-center">
-            <img src="/iu-brain-d-express/logo-hiumanlab.png" alt="Hiumanlab" className="h-5" style={{filter: 'brightness(0) invert(1)', opacity: 0.6}} />
+            <img
+              src={LOGO_PATH}
+              alt="Hiumanlab"
+              style={{ height: '20px', mixBlendMode: 'screen', opacity: 1 }}
+            />
           </div>
         </div>
       </aside>
 
       {/* ── MAIN ── */}
       <main className="flex-1 flex flex-col overflow-hidden">
-
-        {/* Header */}
         <header className="h-14 bg-white border-b border-slate-200 flex items-center justify-between px-8 flex-shrink-0">
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
@@ -195,41 +200,33 @@ export default function App() {
             <div ref={scrollRef} className="flex-1 overflow-y-auto p-8 space-y-5">
               <AnimatePresence initial={false}>
                 {messages.map((msg, i) => (
-                  <motion.div
-                    key={i}
+                  <motion.div key={i}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.2 }}
                     className={cn('flex gap-3 max-w-[88%]', msg.role === 'user' ? 'ml-auto flex-row-reverse' : '')}
                   >
-                    {/* Avatar */}
                     <div className={cn(
                       'w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0',
                       msg.role === 'assistant' ? 'bg-hiuman-purple text-white' : 'bg-slate-200 text-slate-600'
                     )}>
                       {msg.role === 'assistant' ? <Brain className="w-4 h-4" /> : <User className="w-4 h-4" />}
                     </div>
-
-                    {/* Bubble */}
                     <div className={cn(
                       'px-4 py-3 rounded-2xl text-sm leading-relaxed shadow-sm',
                       msg.role === 'assistant'
                         ? 'bg-white text-slate-800 border border-slate-100 rounded-tl-sm'
                         : 'bg-hiuman-dark text-white rounded-tr-sm'
                     )}>
-                      {msg.role === 'assistant' ? (
-                        <div className="markdown-body">
-                          <ReactMarkdown>{msg.content}</ReactMarkdown>
-                        </div>
-                      ) : (
-                        <p>{msg.content}</p>
-                      )}
+                      {msg.role === 'assistant'
+                        ? <MD className="markdown-body">{msg.content}</MD>
+                        : <p>{msg.content}</p>
+                      }
                     </div>
                   </motion.div>
                 ))}
               </AnimatePresence>
 
-              {/* Typing indicator */}
               {isLoading && (
                 <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex gap-3 max-w-[88%]">
                   <div className="w-8 h-8 rounded-xl bg-hiuman-purple text-white flex items-center justify-center flex-shrink-0">
@@ -247,7 +244,6 @@ export default function App() {
               )}
             </div>
 
-            {/* Input */}
             <div className="p-6 bg-white border-t border-slate-200 flex-shrink-0">
               <form onSubmit={handleSend} className="relative max-w-3xl mx-auto">
                 <input
@@ -258,11 +254,8 @@ export default function App() {
                   disabled={isLoading || sessionDone}
                   className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3.5 pr-14 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-hiuman-purple transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 />
-                <button
-                  type="submit"
-                  disabled={isLoading || !input.trim() || sessionDone}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-2.5 bg-hiuman-purple text-white rounded-xl hover:bg-indigo-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                >
+                <button type="submit" disabled={isLoading || !input.trim() || sessionDone}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-2.5 bg-hiuman-purple text-white rounded-xl hover:bg-indigo-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
                   <Send className="w-4 h-4" />
                 </button>
               </form>
@@ -276,13 +269,10 @@ export default function App() {
           <AnimatePresence>
             {report && (
               <motion.div
-                initial={{ x: '100%' }}
-                animate={{ x: 0 }}
-                exit={{ x: '100%' }}
+                initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
                 transition={{ type: 'spring', damping: 25, stiffness: 200 }}
                 className="w-1/2 bg-white border-l border-slate-200 flex flex-col shadow-2xl z-20 overflow-hidden"
               >
-                {/* Report header */}
                 <div className="h-14 border-b border-slate-200 flex items-center justify-between px-6 bg-slate-50/80 flex-shrink-0">
                   <div className="flex items-center gap-2">
                     <FileText className="w-4 h-4 text-hiuman-purple" />
@@ -299,13 +289,18 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* PDF printable content */}
                 <div className="flex-1 overflow-y-auto">
                   <div id="pdf-content" className="p-10">
-                    {/* PDF branding header */}
+                    {/* PDF Header */}
                     <div className="flex items-start justify-between pb-6 mb-8 border-b border-slate-200">
                       <div>
-                        <img src="/iu-brain-backend-d-express/logo-hiumanlab.png" alt="Hiumanlab" className="h-7 mb-2" />
+                        <img
+                          src={LOGO_PATH}
+                          alt="Hiumanlab"
+                          style={{ height: '28px', marginBottom: '6px', display: 'block' }}
+                          onError={e => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'block'; }}
+                        />
+                        <span style={{ display: 'none', fontWeight: 700, fontSize: '18px', color: '#1e1b4b' }}>Hiumanlab</span>
                         <p className="text-[10px] font-bold text-hiuman-purple uppercase tracking-widest">iu Brain · Diagnóstico Express</p>
                         <p className="text-[10px] text-slate-400 mt-0.5">Creating Technology Together</p>
                       </div>
@@ -317,13 +312,16 @@ export default function App() {
                       </div>
                     </div>
 
-                    <div className="markdown-body">
-                      <ReactMarkdown>{report}</ReactMarkdown>
-                    </div>
+                    <MD className="markdown-body">{report}</MD>
 
-                    {/* PDF footer */}
+                    {/* PDF Footer */}
                     <div className="mt-12 pt-6 border-t border-slate-200 flex justify-between items-center">
-                      <img src="/iu-brain-backend-d-express/logo-hiumanlab.png" alt="Hiumanlab" className="h-4 opacity-40" />
+                      <img
+                        src={LOGO_PATH}
+                        alt="Hiumanlab"
+                        style={{ height: '16px', opacity: 0.5, display: 'block' }}
+                        onError={e => { e.target.style.display = 'none'; }}
+                      />
                       <p className="text-[10px] text-slate-400 text-right leading-relaxed">
                         contacto@hiumanlab.com · www.iucorporation.com<br />
                         Generado por iu Brain — Creating Technology Together
