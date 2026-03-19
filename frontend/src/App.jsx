@@ -124,7 +124,6 @@ export default function App() {
   };
 
   const sendEmail = async () => {
-    if (!consultorEmail) return;
     setEmailSending(true);
     setEmailError('');
     try {
