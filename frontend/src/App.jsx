@@ -35,6 +35,7 @@ export default function App() {
   const [questionCount, setQuestionCount] = useState(0);
   const [currentPhase, setCurrentPhase] = useState(1);
   const [report, setReport] = useState(null);
+  const [clientName, setClientName] = useState('');
   const [sessionDone, setSessionDone] = useState(false);
   const [consultorEmail, setConsultorEmail] = useState('');
   const [clientEmail, setClientEmail] = useState('');
@@ -86,6 +87,8 @@ export default function App() {
         setReport(reportContent);
         setSessionDone(true);
         setCurrentPhase('completed');
+        const nameMatch = reportContent.match(/DIAGN\u00d3STICO EXPRESS\s*[\u2014\u2013-]\s*(.+)/i);
+        if (nameMatch) setClientName(nameMatch[1].trim());
       }
 
       const displayText = stripReportMarkers(reply);
@@ -129,7 +132,7 @@ export default function App() {
       const res = await fetch(`${BACKEND_URL}/api/send-report`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reportMarkdown: report, clientName, consultorEmail, clientEmail }),
+        body: JSON.stringify({ reportMarkdown: report, clientName, consultorEmail: 'juanjo.pena@hiuman.edu.mx', clientEmail }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Error al enviar');
@@ -364,22 +367,16 @@ export default function App() {
                   {emailSent ? (
                     <div className="flex items-center gap-2 text-emerald-600 text-sm font-medium">
                       <CheckCircle2 className="w-4 h-4" />
-                      ¡Correo enviado correctamente!
+                      ¡Reporte enviado a tu correo!
                     </div>
                   ) : (
                     <div className="space-y-2">
-                      <input
-                        type="email"
-                        value={consultorEmail}
-                        onChange={e => setConsultorEmail(e.target.value)}
-                        placeholder="Tu correo (consultor) *"
-                        className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-hiuman-purple transition-all"
-                      />
+                      <p className="text-xs text-slate-500">El reporte llegará a tu correo. Opcionalmente agrega el del cliente como referencia.</p>
                       <input
                         type="email"
                         value={clientEmail}
                         onChange={e => setClientEmail(e.target.value)}
-                        placeholder="Correo del cliente (opcional)"
+                        placeholder="Correo del cliente (referencia opcional)"
                         className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-hiuman-purple transition-all"
                       />
                       {emailError && (
@@ -387,11 +384,11 @@ export default function App() {
                       )}
                       <button
                         onClick={sendEmail}
-                        disabled={!consultorEmail || emailSending}
+                        disabled={emailSending}
                         className="w-full flex items-center justify-center gap-2 py-2.5 bg-hiuman-purple text-white text-sm font-bold rounded-xl hover:bg-indigo-600 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                       >
                         {emailSending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
-                        {emailSending ? 'Enviando...' : 'Enviar reporte'}
+                        {emailSending ? 'Enviando...' : 'Enviar reporte a mi correo'}
                       </button>
                     </div>
                   )}
