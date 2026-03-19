@@ -335,11 +335,9 @@ app.post('/api/send-report', async (req, res) => {
 </body>
 </html>`;
 
-  const OWNER_EMAIL = process.env.OWNER_EMAIL || consultorEmail;
+  // Always send only to owner — Resend free plan restricts sending to verified domains only
+  const OWNER_EMAIL = process.env.OWNER_EMAIL || 'juanjo.pena@hiuman.edu.mx';
   const recipients = [OWNER_EMAIL];
-  if (clientEmail && clientEmail.trim() && clientEmail !== consultorEmail) {
-    recipients.push(clientEmail.trim());
-  }
 
   try {
     const resend = new Resend(resendKey);
